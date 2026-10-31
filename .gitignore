@@ -2,3 +2,6 @@ node_modules
 dist
 .DS_Store
 *.local
+
+# tokens.remypost.me lives in its own repo (Remy-Post/tokens.remypost.me)
+apps/tokens/
