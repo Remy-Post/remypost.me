@@ -12,7 +12,7 @@ export default {
   positioning:
     'A computer science student who builds software the way a brand is built: one clear idea, said plainly, made to be remembered.',
   intro:
-    'I’m in third year of a concurrent CS degree and programming diploma in Ontario. This summer I ran information management for a 50-person Canadian Forces training unit as a co-op student. The rest of the time I build the tools I want to exist.',
+    'I’m in third year of a concurrent CS degree and programming diploma in Ontario. This summer I ran information management for a Canadian Forces training unit of 75+ people as a co-op student. The rest of the time I build the tools I want to exist.',
   availability: 'Open to co-op and junior developer roles.',
 
   brandIntro:
@@ -26,7 +26,7 @@ export default {
   },
   values: [
     { name: 'Plain', line: 'If it needs a paragraph to explain, the design isn’t done.' },
-    { name: 'Specific', line: 'Fifty people and ten departments, not “various stakeholders.”' },
+    { name: 'Specific', line: '75 people and ten departments, not “various stakeholders.”' },
     { name: 'Owned', line: 'I ship it, document it, and stay for the second meeting.' },
   ],
 
@@ -49,7 +49,7 @@ export default {
     pine: 'Dark, desaturated green for depth. Low saturation reads as established rather than trendy.',
   },
   voice: [
-    { say: 'I rebuilt the intranet for a 50-person unit.', dont: 'I leveraged SharePoint to drive digital transformation.' },
+    { say: 'I rebuilt the intranet for a 75-person unit.', dont: 'I leveraged SharePoint to drive digital transformation.' },
     { say: 'It plans my study week and puts it on my calendar.', dont: 'An AI-powered productivity solution.' },
     { say: 'I don’t know yet. I’ll find out by Friday.', dont: 'Great question! Let me circle back.' },
   ],
@@ -67,13 +67,25 @@ export default {
         'A 6 AM plan every day, a 30-second evening check-in, and a “check my facts” flow that asks me to confirm each weight against the syllabus line it came from.',
     },
     'cftdc-sharepoint': {
-      remark: 'Rebuilt the intranet for a 50-person Canadian Forces training unit — as a co-op student.',
+      remark: 'Rebuilt the intranet for a 75-person Canadian Forces training unit — as a co-op student.',
       problem:
         'Nearly ten departments shared one SharePoint site nobody loved: documents were hard to find, access didn’t match who needed what, and some weekly tasks were still manual.',
       role:
         'As Temporary Unit Information Management Officer I ran requirements meetings with every department, redesigned pages and libraries, and set permissions to DND information-management standards.',
       outcome:
-        'A restructured site, a Power Automate flow that retired a recurring manual process, and user guides and SOPs the staff adopted.',
+        'A restructured site with a Protection B folder architecture, a Power Automate flow that retired a manual process, a Power BI classroom-utilization report, a Power Apps showcase for the learning support centre, and SOPs the staff adopted. 397.5 hours, start to finish.',
+    },
+    'grocery-brand': {
+      remark: 'A grocery-savings app I branded before writing a line of it.',
+      problem: 'Flyer deals and coupons are scattered across stores and apps; students and families overpay because finding the best price takes too long.',
+      role: 'Drafted the brand core with two collaborators — purpose, audience, positioning, promise, personality, palette — and a three-tier pricing model with a student discount.',
+      outcome: 'Still building, and still unnamed. The strategy came first on purpose: it decides what the product is allowed to be.',
+    },
+    'stem-marketplace': {
+      remark: 'A course-materials marketplace for Lakehead’s STEM Centre, built by a team of five.',
+      problem: 'Students buy and sell textbooks and lab gear through scattered group chats with no trust or structure.',
+      role: 'Front-end developer on account registration and listing creation, inside a full requirements-and-planning process for COMP 3415.',
+      outcome: 'In progress this term — requirements and plan delivered, build underway.',
     },
     'lawn-guy': {
       remark: 'A real website for a real Bradford lawn-care business, deployment scripts included.',
@@ -112,21 +124,27 @@ export default {
   timeline: [
     {
       year: '2020',
+      place: 'Bradford',
+      title: 'The Snow Guy.',
+      blurb: 'My first brand: a neighbourhood snow-shovelling flyer with tiered pricing and a neighbour discount. The naming pattern came back six years later as The Lawn Guy.',
+    },
+    {
+      year: '2020',
       place: 'Aurora',
       title: 'Four years of high school, in French.',
-      blurb: 'A French-curriculum school and a Specialist High Skills Major in Health & Wellness. I learned to keep going in a room I didn’t fully understand yet.',
+      blurb: 'A French-curriculum school, a Specialist High Skills Major in Health & Wellness, and a francophone summer program in Moncton in 2022.',
     },
     {
       year: '2023',
       place: 'Bradford',
       title: 'The meat counter.',
-      blurb: 'January to May at Food Basics. Supply and demand in real time: what’s full at four, gone by six, and who comes back asking.',
+      blurb: 'January to June at Food Basics. Supply and demand in real time: what’s full at four, gone by six, and who comes back asking.',
     },
     {
       year: '2023',
       place: 'Bradford',
       title: 'Thirty kids at a time.',
-      blurb: 'Three summers as a camp counsellor for groups of 30+ kids aged four to eight. Every plan meets reality in ninety seconds.',
+      blurb: 'Hired at sixteen by the same town camp I went to as a kid. Three summers with groups of 30+ kids aged four to eight; every plan meets reality in ninety seconds.',
     },
     {
       year: '2024',
@@ -144,13 +162,13 @@ export default {
       year: '2026',
       place: 'CFB Borden',
       title: 'A co-op with an officer’s job title.',
-      blurb: 'Temporary Unit Information Management Officer for the Canadian Forces Training Development Centre, with Reliability Status clearance.',
+      blurb: 'Temporary Unit Information Management Officer for the Canadian Forces Training Development Centre, with Reliability Status clearance. My supervisor’s evaluation called me a strong candidate for future employment.',
     },
     {
       year: 'Now',
       place: 'Bradford',
-      title: 'Third year, building my own tools.',
-      blurb: 'Software engineering, computer architecture and microeconomics by day; Course Hub, a watch app and this brand book by night.',
+      title: 'Third year, building in public.',
+      blurb: 'A five-person software engineering team project, microeconomics, and a grocery-app brand on the side — plus Course Hub, a watch app and this brand book.',
     },
   ],
 
@@ -158,15 +176,16 @@ export default {
     dnd: {
       remark: 'A co-op student trusted with the unit’s information management.',
       points: [
-        'Led the SharePoint modernization for 50+ staff across nearly ten departments as Temporary Unit IMO.',
+        'Led the SharePoint modernization for 75+ staff across nearly ten departments as Temporary Unit IMO.',
         'Ran recurring requirements meetings with each department and turned them into redesigned pages and libraries.',
-        'Set page- and folder-level permissions to DND information-management standards.',
+        'Implemented a Protection B folder architecture and set page- and folder-level permissions to DND standards.',
+        'Built a Power BI classroom-utilization report and a Power Apps showcase for the learning support centre.',
         'Replaced a recurring manual process with a Power Automate flow, and wrote the SOPs staff now follow.',
       ],
     },
     camp: {
       remark: 'Three summers of plans meeting reality in ninety seconds.',
-      points: ['Designed and ran daily activities for groups of 30+ campers aged 4 to 8.', 'Mediated conflicts and gave parents clear daily updates.'],
+      points: ['Designed and ran daily activities for groups of 30+ campers aged 4 to 8.', 'Mediated conflicts and gave parents clear daily updates, in English or French.', 'Certified in Standard First Aid and CPR Level C.'],
     },
     foodbasics: {
       remark: 'Supply and demand, observed at close range.',
@@ -198,7 +217,7 @@ export default {
       slug: 'fifty-people-one-sharepoint',
       no: '003',
       date: '2026-09-12',
-      title: 'Fifty people, ten departments, one SharePoint',
+      title: 'Seventy-five people, ten departments, one SharePoint',
       dek: 'What a summer as a temporary IMO taught me about the meeting before the code.',
       read: '4 min',
       body: [
@@ -249,9 +268,13 @@ export default {
     },
   ],
 
+  endorsement: {
+    quote: 'A strong candidate for future employment opportunities.',
+    source: 'DND supervisor, co-op evaluation · August 2026',
+  },
   funFacts: [
+    'Ran a snow-shovelling business with tiered pricing in 2020.',
     'Went to high school entirely in French.',
-    'Holds Government of Canada Reliability Status.',
     'Wrote a music player for his own watch.',
   ],
   contactCta: 'If your team needs someone who sits in the meeting before the code and then writes the code, let’s talk.',

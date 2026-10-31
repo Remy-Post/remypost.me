@@ -62,6 +62,8 @@ export default {
   projects: {
     'course-hub': project('Course Hub'),
     'cftdc-sharepoint': project('CFTDC SharePoint'),
+    'grocery-brand': project('Untitled grocery app'),
+    'stem-marketplace': project('STEM Centre Marketplace'),
     'lawn-guy': project('The Lawn Guy'),
     agentui: project('AgentUI'),
     'watch-music': project('Music for Galaxy Watch'),
@@ -103,6 +105,7 @@ export default {
     },
   ],
 
+  endorsement: { quote: '[Endorsement · a line someone else wrote about you]', source: '[Who said it, and where]' },
   funFacts: ['[Fun fact 1 · true and specific]', '[Fun fact 2]', '[Fun fact 3]'],
   contactCta: ph('Contact line', 15, 'One sentence that makes it easy to reach out.'),
 };

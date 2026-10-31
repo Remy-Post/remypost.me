@@ -46,6 +46,26 @@ export const projects = [
     plate: { bg: '#2c3440', fg: '#e8e6e1', mark: 'IM' },
   },
   {
+    slug: 'grocery-brand',
+    name: 'Untitled grocery app',
+    kind: 'Brand strategy',
+    year: '2026',
+    stack: ['Positioning', 'Pricing tiers', 'Brand core', 'Market research'],
+    repo: null,
+    status: 'In progress',
+    plate: { bg: '#e6e9c9', fg: '#2b3a1e', mark: '¢' },
+  },
+  {
+    slug: 'stem-marketplace',
+    name: 'STEM Centre Marketplace',
+    kind: 'Team',
+    year: '2026',
+    stack: ['Web app', 'Requirements', 'Team of five', 'COMP 3415'],
+    repo: null,
+    status: 'In progress',
+    plate: { bg: '#3a3226', fg: '#efe6d6', mark: 'SC' },
+  },
+  {
     slug: 'lawn-guy',
     name: 'The Lawn Guy',
     kind: 'Client',
@@ -131,5 +151,5 @@ export const education = [
 export const jobs = [
   { key: 'dnd', org: 'Department of National Defence, CFB Borden', role: 'IT Co-op Student & Temporary Unit IMO', when: 'Jun – Aug 2026' },
   { key: 'camp', org: 'Town of Bradford West Gwillimbury', role: 'Camp Counsellor', when: 'Summers 2023 – 2025' },
-  { key: 'foodbasics', org: 'Food Basics, Bradford', role: 'Meat Associate', when: 'Jan – May 2023' },
+  { key: 'foodbasics', org: 'Food Basics, Bradford', role: 'Meat Associate', when: 'Jan – Jun 2023' },
 ];
