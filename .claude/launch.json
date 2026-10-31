@@ -1,0 +1,7 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "site", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev", "-w", "apps/site", "--", "--port", "5173", "--strictPort"], "port": 5173 },
+    { "name": "tokens", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev", "-w", "apps/tokens", "--", "--strictPort"], "port": 5174 }
+  ]
+}

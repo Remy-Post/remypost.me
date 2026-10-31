@@ -1,0 +1,48 @@
+# Every push to main builds the site and publishes it to the Oracle VM.
+# The deploy key can only run ~/bin/publish-remypost on the VM (forced command),
+# which unpacks the tarball into a new release and atomically switches to it.
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
+
+      - name: Publish to Oracle VM
+        env:
+          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/deploy
+          chmod 600 ~/.ssh/deploy
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          tar -czf - -C apps/site/dist . | ssh -i ~/.ssh/deploy -o IdentitiesOnly=yes -o BatchMode=yes "$DEPLOY_HOST"
+
+      - name: Smoke test
+        run: |
+          asset=$(grep -o 'assets/index-[^"]*\.js' apps/site/dist/index.html | head -1)
+          for url in https://remypost.me/ https://preview.remy-post.duckdns.org/; do
+            if curl -fsS --max-time 15 "$url" | grep -q "$asset"; then echo "OK   $url serves $asset"; else echo "SKIP $url (not serving this build yet — DNS or TLS pending?)"; fi
+          done
+          curl -fsS --max-time 15 https://preview.remy-post.duckdns.org/ | grep -q "$asset"

@@ -1,0 +1,12 @@
+{
+  "name": "remypost.me",
+  "private": true,
+  "workspaces": [
+    "apps/site"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w apps/site",
+    "build": "npm run build -w apps/site",
+    "preview": "npm run preview -w apps/site"
+  }
+}
