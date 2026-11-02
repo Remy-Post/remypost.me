@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router';
-import { chapters, edition, person } from '../content/base.js';
+import { chapters, edition, neighbours, person } from '../content/base.js';
 import { showSwitcher, useCopy, variants } from '../content/copy/index.jsx';
 import { Arrow, Half } from './Icons.jsx';
 import Monogram from './Monogram.jsx';
@@ -165,6 +165,19 @@ function Colophon() {
           <div>
             <dt>Built</dt>
             <dd>React, by hand, in {person.location}. No cookies, no trackers.</dd>
+          </div>
+          <div>
+            <dt>Next door</dt>
+            <dd>
+              {neighbours.map((site, i) => (
+                <span key={site.name}>
+                  {i > 0 && ' · '}
+                  <a className="ul" href={site.url}>
+                    {site.name}
+                  </a>
+                </span>
+              ))}
+            </dd>
           </div>
         </dl>
       </div>
