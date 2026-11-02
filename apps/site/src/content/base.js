@@ -12,6 +12,13 @@ export const person = {
   resumePdf: '/Remy-Post-Resume.pdf',
 };
 
+/** Live sites on remypost.me subdomains, linked from the colophon. */
+export const neighbours = [
+  { name: 'tokens', url: 'https://tokens.remypost.me' },
+  { name: 'specs', url: 'https://specs.remypost.me' },
+  { name: 'aa', url: 'https://aa.remypost.me' },
+];
+
 export const edition = { version: '1.0', date: 'October 2026' };
 
 /** The book's chapters, in order. `path` doubles as the route. */
