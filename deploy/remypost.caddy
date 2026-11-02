@@ -1,0 +1,38 @@
+# BEGIN remypost — managed by remypost.me/deploy/vm-setup.sh
+# remypost.me — static build published by GitHub Actions via ~/bin/publish-remypost
+(remypost) {
+	root * /srv/sites/remypost/current
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		X-Frame-Options "DENY"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		-Server
+	}
+	# Apps live on their own subdomains; old links to the path land on the app, query kept.
+	@tokens path /tokens /tokens/*
+	redir @tokens https://tokens.remypost.me/{?query} permanent
+	@assets path /assets/*
+	header @assets Cache-Control "public, max-age=31536000, immutable"
+	@pages not path /assets/*
+	header @pages Cache-Control "no-cache"
+	try_files {path} {path}.html /index.html
+	file_server
+}
+
+remypost.me {
+	import remypost
+}
+
+www.remypost.me {
+	redir https://remypost.me{uri} permanent
+}
+
+# Staging copy on the DuckDNS wildcard, kept out of search results.
+preview.remy-post.duckdns.org {
+	import remypost
+	header X-Robots-Tag "noindex, nofollow"
+}
+# END remypost
