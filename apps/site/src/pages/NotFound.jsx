@@ -1,17 +1,18 @@
 import { Link } from 'react-router';
-import { Arrow } from '../components/Icons.jsx';
-import { usePageTitle } from '../components/Reveal.js';
 
+/** Anything the router does not know, and a /work/ slug that is not a project. */
 export default function NotFound() {
-  usePageTitle('Page not found — Remy Post');
   return (
-    <section className="wrap lost">
-      <p className="mono">Error 404 · Page not in this edition</p>
-      <h1>This page isn’t in the book.</h1>
-      <p className="voice">It may have moved, or it never existed. The contents page knows where everything is.</p>
-      <Link to="/" className="btn">
-        Back to the cover <Arrow />
-      </Link>
+    <section className="sec" aria-labelledby="lost-name">
+      <title>Page not found, Remy Post</title>
+      <h1 id="lost-name" className="display">
+        This page doesn’t exist.
+      </h1>
+      <div className="actions">
+        <Link className="btn btn--solid" to={{ pathname: '/', hash: '#projects' }}>
+          Go to the projects
+        </Link>
+      </div>
     </section>
   );
 }

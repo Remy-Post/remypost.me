@@ -3,22 +3,58 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Remy Post — Identity Guidelines</title>
-    <meta name="description" content="Remy Post — computer science student and developer in Ontario. A portfolio written as a brand book." />
-    <meta name="theme-color" content="#f6f1e7" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#17140f" media="(prefers-color-scheme: dark)" />
-    <meta property="og:title" content="Remy Post — Identity Guidelines v1.0" />
-    <meta property="og:description" content="Developer with a brand brain. A portfolio written as a brand book." />
+    <title>Remy Post, developer</title>
+    <meta name="description" content="Developer and third-year computer science student in Bradford, Ontario. I build web apps, a watch app and the automation that runs my week." />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#0B0C0E" />
+    <meta property="og:title" content="Remy Post, developer" />
+    <meta property="og:description" content="Developer and third-year computer science student in Bradford, Ontario. I build web apps, a watch app and the automation that runs my week." />
     <meta property="og:url" content="https://remypost.me/" />
     <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Remy Post" />
+    <meta property="og:image" content="https://remypost.me/og.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Remy Post, developer. Nine projects, each shown as an object on a table." />
+    <meta name="twitter:card" content="summary_large_image" />
     <link rel="canonical" href="https://remypost.me/" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        "name": "Remy Post",
+        "url": "https://remypost.me/",
+        "jobTitle": "Developer and computer science student",
+        "description": "Developer and third-year computer science student in Bradford, Ontario. I build web apps, a watch app and the automation that runs my week.",
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": "Bradford",
+          "addressRegion": "Ontario",
+          "addressCountry": "CA"
+        },
+        "sameAs": ["https://github.com/Remy-Post", "https://www.linkedin.com/in/remy-post-7b60b8279"]
+      }
+    </script>
     <script>
-      try { var t = localStorage.getItem('theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+      // The 3D objects switch (see three/live.js): the stored choice, or ?objects=off for this page load only.
+      try { if (localStorage.getItem('objects') === 'off') document.documentElement.dataset.objects = 'off'; } catch (e) {}
+      if (new URLSearchParams(location.search).get('objects') === 'off') document.documentElement.dataset.objects = 'off';
     </script>
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      <h1>Remy Post</h1>
+      <p>Developer and third-year computer science student in Bradford, Ontario. I build web apps, a watch app and the automation that runs my week.</p>
+      <p>Open to co-op and junior developer roles.</p>
+      <ul>
+        <li><a href="/Remy-Post-Resume.pdf">Résumé (PDF)</a></li>
+        <li><a href="https://github.com/Remy-Post">GitHub</a></li>
+        <li><a href="https://www.linkedin.com/in/remy-post-7b60b8279">LinkedIn</a></li>
+      </ul>
+      <p>The full page needs JavaScript.</p>
+    </noscript>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

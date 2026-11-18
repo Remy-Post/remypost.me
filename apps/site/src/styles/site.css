@@ -1,0 +1,998 @@
+/*
+ * One dark studio, one typeface. The page stays quiet around the 3D stage.
+ * Breakpoints: 760 px (the bar folds into a menu) and 960 px (the stage moves beside the text).
+ */
+
+:root {
+  color-scheme: dark;
+  --ground: #0b0c0e;
+  --raise: #14161a;
+  --line: #2a2e35;
+  --text: #f2f3f5;
+  --muted: #9ba1ac;
+  --accent: #5b7cff;
+  --font: 'Instrument Sans Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --bar: 56px;
+  /* Where a section lands under the fixed chrome when it is scrolled to: the bar, and on phones the stage too. */
+  --top: calc(var(--bar) + 42svh);
+  /* One transition for every colour change of a control (none under reduced motion, below). */
+  --t: 120ms linear;
+  accent-color: var(--accent);
+  scrollbar-color: var(--line) var(--ground);
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--ground);
+}
+
+@media (min-width: 760px) {
+  :root {
+    --bar: 72px;
+  }
+}
+
+@media (min-width: 960px) {
+  :root {
+    --top: var(--bar);
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  /* Focus, find-in-page and anchors keep clear of the fixed bar (and on phones the stage under it). */
+  scroll-padding-top: var(--top);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  padding-top: var(--bar);
+  background: var(--ground);
+  color: var(--text);
+  font: 400 1rem/1.5 var(--font);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+p,
+dl,
+dd,
+ul {
+  margin: 0;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+p,
+li,
+dd {
+  text-wrap: pretty;
+}
+
+/* Dates and years line up whatever they say. */
+.meta,
+.link__detail,
+.facts dd {
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+a {
+  color: inherit;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Lenis (smooth wheel scrolling, three/smooth.js): the page keeps its own scroll */
+
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+/* The bar */
+
+.bar {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 10;
+  height: var(--bar);
+  background: var(--ground);
+  border-bottom: 1px solid var(--line);
+}
+
+.bar__inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+  padding: 0 24px;
+}
+
+@media (min-width: 960px) {
+  .bar__inner {
+    padding: 0 56px;
+  }
+}
+
+.bar__brand {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-right: auto;
+  font-size: 1.375rem;
+  font-weight: 600;
+  font-stretch: 76%;
+  letter-spacing: -0.02em;
+  text-decoration: none;
+}
+
+.bar__links {
+  display: none;
+}
+
+.bar__links ul,
+.menu ul,
+.index ul {
+  padding: 0;
+  list-style: none;
+}
+
+.bar__links ul {
+  display: flex;
+}
+
+.bar__links a {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 12px;
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.bar__links a,
+.menu a,
+.index a,
+.switch,
+.bar__menu,
+.btn,
+.link,
+.back,
+.next,
+.points li {
+  transition: color var(--t), background-color var(--t), border-color var(--t), opacity var(--t);
+}
+
+.bar__links a:hover,
+.menu a:hover,
+.index a:hover,
+
+.bar__links a:active,
+.menu a:active,
+.index a:active,
+.back:active {
+  color: var(--text);
+  background: var(--raise);
+}
+
+/* The section the visitor is in. */
+.bar__links a[aria-current],
+.menu a[aria-current] {
+  color: var(--text);
+}
+
+@media (min-width: 760px) {
+  .bar__links {
+    display: block;
+  }
+
+  .bar__menu {
+    display: none;
+  }
+}
+
+.bar__menu {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--muted);
+  border-radius: 6px;
+  background: transparent;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.bar__menu:hover {
+  background: var(--raise);
+}
+
+.bar__menu:active {
+  background: var(--line);
+}
+
+/* The 3D switch: a label, a track and a thumb, in a 44 px target. */
+.switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.switch__track {
+  position: relative;
+  flex: none;
+  width: 36px;
+  height: 20px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--raise);
+  transition: border-color var(--t), background-color var(--t);
+}
+
+.switch__thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--muted);
+  transition: transform var(--t), background-color var(--t);
+}
+
+.switch[aria-checked='true'] {
+  color: var(--text);
+}
+
+.switch[aria-checked='true'] .switch__track {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 22%, var(--ground));
+}
+
+.switch[aria-checked='true'] .switch__thumb {
+  background: var(--accent);
+  transform: translateX(16px);
+}
+
+.switch:hover {
+  color: var(--text);
+}
+
+.switch:hover .switch__track {
+  border-color: var(--muted);
+}
+
+.switch[aria-checked='true']:hover .switch__track {
+  border-color: var(--accent);
+}
+
+.switch:active .switch__thumb {
+  background: var(--text);
+}
+
+.switch[aria-disabled='true'] {
+  cursor: default;
+  opacity: 0.6;
+}
+
+/* The phone menu: a plain full-width list under the bar */
+
+.menu {
+  position: fixed;
+  inset: var(--bar) 0 0;
+  z-index: 9;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 8px 24px 32px;
+  background: var(--ground);
+}
+
+.menu a {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 1.25rem;
+  text-decoration: none;
+}
+
+.menu ul ul {
+  padding: 0 0 8px 16px;
+}
+
+.menu ul ul a {
+  min-height: 44px;
+  font-size: 1rem;
+  color: var(--muted);
+}
+
+@media (min-width: 760px) {
+  .menu {
+    display: none;
+  }
+}
+
+/* The frame: a text column and the stage */
+
+.frame {
+  position: relative;
+}
+
+.text {
+  background: var(--ground);
+  padding: 0 24px;
+  container-type: inline-size;
+  font-size: clamp(1.25rem, 0.75rem + 1vw, 1.5rem);
+  line-height: 1.45;
+}
+
+.stage {
+  position: sticky;
+  top: var(--bar);
+  z-index: 2;
+  height: 42svh;
+  overflow: hidden;
+  background: var(--ground);
+  border-bottom: 1px solid var(--line);
+}
+
+@media (max-width: 959.98px) {
+  .stage {
+    overflow: visible;
+    border-bottom: 0;
+  }
+
+  /* The text slides under the stage: it fades out at the stage's edge instead of being cut by a hairline. */
+  .stage::after {
+    content: '';
+    position: absolute;
+    inset: 100% 0 auto;
+    height: 28px;
+    background: linear-gradient(var(--ground), transparent);
+    pointer-events: none;
+  }
+}
+
+@media (min-width: 960px) {
+  .frame {
+    display: flex;
+    align-items: flex-start;
+  }
+
+  .text {
+    flex: 0 0 44%;
+    min-width: 0;
+    padding: 0 56px;
+  }
+
+  .stage {
+    order: 2;
+    flex: 0 0 56%;
+    height: calc(100svh - var(--bar));
+    border-bottom: 0;
+  }
+}
+
+/* Stills: the incoming one fades in over the outgoing one, which is dropped when it is done. */
+
+.stage__still {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0s linear 300ms;
+}
+
+.stage__still.is-on {
+  z-index: 1;
+  opacity: 1;
+  transition: opacity 300ms cubic-bezier(0.22, 0.61, 0.24, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage__still,
+  .stage__still.is-on {
+    transition: none;
+  }
+}
+
+/* The live canvas: above the stills, in the mount. It is shown (fading over the still) only once its object has drawn. */
+.stage__mount {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+}
+
+.stage__mount canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 300ms cubic-bezier(0.22, 0.61, 0.24, 1);
+}
+
+.stage__mount canvas[data-ready] {
+  opacity: 1;
+}
+
+/* On a project page the object turns when dragged: horizontal drags are ours, vertical ones still scroll the page. */
+.stage__mount {
+  touch-action: pan-y;
+}
+
+.stage__mount[data-hit] {
+  cursor: pointer;
+}
+
+.stage__mount[data-turn] {
+  touch-action: pan-y;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.stage__mount[data-turn]:active {
+  cursor: grabbing;
+}
+
+.stage__mount:focus-visible {
+  outline-offset: -4px;
+}
+
+/* No visible rectangle: the picture, still or live, fades into the page's ground at every edge. */
+.stage__still,
+.stage__mount canvas {
+  /* eased stops (a smoothstep), so the fade has no corner where it ends that the eye can trace on the dark */
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, rgb(0 0 0 / 0.03) 0.8%, rgb(0 0 0 / 0.13) 1.8%, rgb(0 0 0 / 0.3) 2.8%, rgb(0 0 0 / 0.55) 3.9%, rgb(0 0 0 / 0.8) 5%, rgb(0 0 0 / 0.95) 6.2%, #000 7.5%, #000 92.5%, rgb(0 0 0 / 0.95) 93.8%, rgb(0 0 0 / 0.8) 95%, rgb(0 0 0 / 0.55) 96.1%, rgb(0 0 0 / 0.3) 97.2%, rgb(0 0 0 / 0.13) 98.2%, rgb(0 0 0 / 0.03) 99.2%, transparent), linear-gradient(180deg, transparent 0, rgb(0 0 0 / 0.03) 0.8%, rgb(0 0 0 / 0.13) 1.8%, rgb(0 0 0 / 0.3) 2.8%, rgb(0 0 0 / 0.55) 3.9%, rgb(0 0 0 / 0.8) 5%, rgb(0 0 0 / 0.95) 6.2%, #000 7.5%, #000 92.5%, rgb(0 0 0 / 0.95) 93.8%, rgb(0 0 0 / 0.8) 95%, rgb(0 0 0 / 0.55) 96.1%, rgb(0 0 0 / 0.3) 97.2%, rgb(0 0 0 / 0.13) 98.2%, rgb(0 0 0 / 0.03) 99.2%, transparent);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(90deg, transparent 0, rgb(0 0 0 / 0.03) 0.8%, rgb(0 0 0 / 0.13) 1.8%, rgb(0 0 0 / 0.3) 2.8%, rgb(0 0 0 / 0.55) 3.9%, rgb(0 0 0 / 0.8) 5%, rgb(0 0 0 / 0.95) 6.2%, #000 7.5%, #000 92.5%, rgb(0 0 0 / 0.95) 93.8%, rgb(0 0 0 / 0.8) 95%, rgb(0 0 0 / 0.55) 96.1%, rgb(0 0 0 / 0.3) 97.2%, rgb(0 0 0 / 0.13) 98.2%, rgb(0 0 0 / 0.03) 99.2%, transparent), linear-gradient(180deg, transparent 0, rgb(0 0 0 / 0.03) 0.8%, rgb(0 0 0 / 0.13) 1.8%, rgb(0 0 0 / 0.3) 2.8%, rgb(0 0 0 / 0.55) 3.9%, rgb(0 0 0 / 0.8) 5%, rgb(0 0 0 / 0.95) 6.2%, #000 7.5%, #000 92.5%, rgb(0 0 0 / 0.95) 93.8%, rgb(0 0 0 / 0.8) 95%, rgb(0 0 0 / 0.55) 96.1%, rgb(0 0 0 / 0.3) 97.2%, rgb(0 0 0 / 0.13) 98.2%, rgb(0 0 0 / 0.03) 99.2%, transparent);
+  mask-composite: intersect;
+}
+
+/* Once the canvas has drawn the current object it replaces the still (after its own fade-in); the still is the fallback. */
+.stage:has(canvas[data-ready]) .stage__still {
+  opacity: 0;
+  transition: opacity 0s linear 300ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage__mount canvas {
+    transition: none;
+  }
+
+  .stage:has(canvas[data-ready]) .stage__still {
+    transition: none;
+  }
+}
+
+/* The project index, top right of the stage (desktop only) */
+
+.index {
+  display: none;
+}
+
+@media (min-width: 1100px) {
+  .index {
+    display: block;
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 300ms cubic-bezier(0.22, 0.61, 0.24, 1), visibility 0s linear 300ms;
+    position: fixed;
+    top: calc(var(--bar) + 20px);
+    right: 28px;
+    z-index: 3;
+    font-size: 0.875rem;
+  }
+
+  .index.is-on {
+    visibility: visible;
+    opacity: 1;
+    transition: opacity 300ms cubic-bezier(0.22, 0.61, 0.24, 1);
+  }
+
+  .index a {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    min-height: 34px;
+    padding-right: 14px;
+    border-right: 2px solid transparent;
+    color: var(--muted);
+    text-align: right;
+    text-decoration: none;
+  }
+
+  .index a[aria-current='true'] {
+    border-right-color: var(--accent);
+    color: var(--text);
+    font-weight: 600;
+  }
+}
+
+@media (min-width: 1100px) and (pointer: coarse) {
+  .index a {
+    min-height: 44px;
+  }
+}
+
+.stage-hint {
+  display: none;
+}
+
+@media (min-width: 960px) {
+  .stage-hint {
+    display: block;
+    position: fixed;
+    right: 0;
+    bottom: 24px;
+    z-index: 3;
+    width: 56%;
+    color: var(--muted);
+    font-size: 0.875rem;
+    text-align: center;
+    pointer-events: none;
+  }
+}
+
+/* Sections and type in the text column */
+
+.sec {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  position: relative;
+  padding: 72px 0;
+}
+
+.sec,
+.projects {
+  scroll-margin-top: var(--top);
+}
+
+@media (min-width: 960px) {
+  .sec {
+    min-height: calc(100svh - var(--bar));
+    padding: 56px 0;
+  }
+}
+
+.text p {
+  max-width: 30em;
+  margin-bottom: 1em;
+}
+
+/* Wide windows: the column's content stops at a comfortable measure instead of stretching with the window. */
+.text > .sec,
+.text > .projects,
+.text > .case {
+  max-width: 34em;
+}
+
+.display {
+  max-width: 100%;
+  margin: 0 0 0.3em;
+  font-size: clamp(3rem, 21.4cqi, 7rem);
+  font-weight: 600;
+  font-stretch: 76%;
+  line-height: 0.9;
+  letter-spacing: -0.02em;
+  overflow-wrap: break-word;
+  text-wrap: balance;
+}
+
+.text .meta {
+  margin-bottom: 0.75em;
+  color: var(--muted);
+  font-size: 0.8em;
+}
+
+.sec > .meta:last-of-type {
+  margin-bottom: 0;
+}
+
+.hint {
+  margin: 2rem 0 0;
+  color: var(--muted);
+  font-size: 0.8em;
+}
+
+/* Stepped sections (education, work): a heading, then one block per school or job, each about a screen */
+
+.sec--steps {
+  justify-content: flex-start;
+  min-height: 0;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  /* From the top: the first entry follows its heading at the same distance in education and in work (each box is still the
+     same height, so the stage plateaus do not move). */
+  justify-content: flex-start;
+  align-items: flex-start;
+  min-height: 62svh;
+  padding: 24px 0;
+}
+
+/* One rhythm in an entry, on an 8 px grid: date, 16, title, 12, role, 8, remark, 16, points. */
+.step > .meta {
+  margin: 0 0 16px;
+}
+
+.step__title {
+  margin: 0 0 12px;
+  font-size: 1.5em;
+  font-weight: 600;
+  font-stretch: 85%;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+.step > p {
+  margin-bottom: 8px;
+}
+
+.step__role {
+  color: var(--muted);
+}
+
+.points {
+  max-width: 30em;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8em;
+  line-height: 1.4;
+}
+
+.points li {
+  margin: 0 0 8px;
+  padding: 8px 0 8px 16px;
+  border-left: 2px solid var(--line);
+  color: var(--muted);
+}
+
+.points li:focus-visible {
+  outline-offset: 0;
+}
+
+.points li.is-lit,
+.points li:hover {
+  border-left-color: var(--accent);
+  color: var(--text);
+}
+
+.skills {
+  padding: 56px 0 24px;
+  font-size: 0.8em;
+}
+
+.skills dl {
+  max-width: 30em;
+}
+
+.skills dl div {
+  display: grid;
+  grid-template-columns: 7.5em 1fr;
+  gap: 0 1em;
+  padding: 0.6em 0;
+  border-top: 1px solid var(--line);
+}
+
+.skills dt {
+  color: var(--muted);
+}
+
+.skills dd {
+  margin: 0;
+}
+
+/* The links: one real link per keycap */
+
+.links {
+  width: 100%;
+  max-width: 30em;
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.link {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1em;
+  min-height: 56px;
+  padding: 12px 0 12px 14px;
+  border-left: 2px solid transparent;
+  border-top: 1px solid var(--line);
+  text-decoration: none;
+}
+
+.links li:last-child .link {
+  border-bottom: 1px solid var(--line);
+}
+
+.link__label {
+  font-weight: 600;
+}
+
+.link__detail {
+  color: var(--muted);
+  font-size: 0.8em;
+}
+
+.link:hover,
+.link.is-lit {
+  border-left-color: var(--accent);
+  background: var(--raise);
+}
+
+.link:active {
+  background: var(--line);
+}
+
+.link:focus-visible {
+  outline-offset: -2px;
+}
+
+/* Buttons */
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+  margin-top: 1.75rem;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0 24px;
+  border: 1px solid var(--text);
+  border-radius: 6px;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.btn--solid {
+  background: var(--text);
+  color: var(--ground);
+}
+
+.btn--solid:hover {
+  background: var(--muted);
+  border-color: var(--muted);
+}
+
+.btn--solid:active {
+  background: var(--line);
+  border-color: var(--line);
+  color: var(--text);
+}
+
+.btn--line {
+  border-color: var(--muted);
+  color: var(--text);
+}
+
+.btn--line:hover {
+  border-color: var(--text);
+  background: var(--raise);
+}
+
+.btn--line:active {
+  background: var(--line);
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  color: var(--muted);
+  font-size: 0.8em;
+}
+
+.status::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+/* The project page */
+
+.case {
+  padding: 32px 0 0;
+}
+
+@media (min-width: 960px) {
+  .case {
+    padding-top: 48px;
+  }
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-bottom: 1.25rem;
+  color: var(--muted);
+  font-size: 0.8em;
+}
+
+.back:hover {
+  color: var(--text);
+}
+
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem 2.5rem;
+  margin: 2.5rem 0 1rem;
+  padding: 1.25rem 0;
+  border-block: 1px solid var(--line);
+}
+
+.facts div:last-child {
+  flex-basis: 100%;
+}
+
+.facts dt {
+  color: var(--muted);
+  font-size: 0.8em;
+}
+
+.case h2 {
+  margin: 2.5rem 0 0.5rem;
+  font-size: 1.125em;
+  font-weight: 600;
+}
+
+.next {
+  display: block;
+  margin-top: 4rem;
+  padding: 2rem 0 5rem;
+  border-top: 1px solid var(--line);
+  text-decoration: none;
+}
+
+.next__label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--muted);
+  font-size: 0.8em;
+}
+
+.next__name {
+  display: block;
+  font-size: clamp(2.25rem, 12cqi, 4rem);
+  font-weight: 600;
+  font-stretch: 76%;
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+.next:active .next__name {
+  color: var(--muted);
+}
+
+.next:hover .next__name {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.12em;
+}
+
+/* The error page (components/ErrorBoundary.jsx): outside the frame, so it sets its own measure */
+.fail {
+  max-width: 34em;
+  margin: 0 auto;
+  padding: 96px 24px;
+}
+
+.fail__title {
+  margin-bottom: 0.5em;
+  font-size: clamp(2rem, 8vw, 3.5rem);
+  font-weight: 600;
+  font-stretch: 85%;
+  line-height: 1;
+}
+
+.fail p {
+  margin-bottom: 1.25em;
+}
+
+/* A way past the bar and into the page, for the keyboard: the first tab stop, seen only when it has focus */
+.skip {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 20;
+  padding: 12px 18px;
+  border-radius: 6px;
+  background: var(--text);
+  color: var(--ground);
+  font-weight: 600;
+  text-decoration: none;
+  transform: translateY(-200%);
+}
+
+.skip:focus {
+  transform: none;
+}
+
+#main:focus {
+  outline: none;
+}
+
+/* The heading the "Projects" link lands on, above the first project */
+.projects__title {
+  margin: 0 0 24px;
+  color: var(--muted);
+  font-size: 1.25rem;
+  font-weight: 600;
+  font-stretch: 85%;
+  letter-spacing: -0.01em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar__links a,
+  .menu a,
+  .index a,
+  .switch,
+  .switch__track,
+  .switch__thumb,
+  .bar__menu,
+  .btn,
+  .link,
+  .back,
+  .next,
+  .points li {
+    transition: none;
+  }
+}

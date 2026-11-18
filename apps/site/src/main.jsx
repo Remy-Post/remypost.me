@@ -1,42 +1,58 @@
-import { StrictMode } from 'react';
+import { StrictMode, Suspense, lazy } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter, Route, Routes } from 'react-router';
-import '@fontsource-variable/archivo/wdth.css';
-import '@fontsource-variable/newsreader/opsz.css';
-import '@fontsource-variable/newsreader/opsz-italic.css';
-import '@fontsource/fragment-mono/400.css';
-import './styles/base.css';
-import './styles/book.css';
-import { CopyProvider } from './content/copy/index.jsx';
-import Book from './components/Book.jsx';
-import Cover from './pages/Cover.jsx';
-import Brand from './pages/Brand.jsx';
-import Identity from './pages/Identity.jsx';
-import { WorkDetail, WorkIndex } from './pages/Work.jsx';
-import History from './pages/History.jsx';
-import { Letter, WritingIndex } from './pages/Writing.jsx';
-import Resume from './pages/Resume.jsx';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
+import '@fontsource-variable/instrument-sans/wdth.css';
+import './styles/site.css';
+import ErrorBoundary from './components/ErrorBoundary.jsx';
+import Frame from './components/Frame.jsx';
+import Home from './pages/Home.jsx';
 import NotFound from './pages/NotFound.jsx';
+
+
+/**
+ * The case-study page is its own chunk, fetched when the browser is idle after the first paint, so the page a visitor
+ * lands on carries nothing of it. By the time a case study is opened the chunk is already there.
+ */
+const loadProject = () => import('./pages/Project.jsx');
+const Project = lazy(loadProject);
+// The preload is only a head start: if it fails (a blocked or stale file) nothing is wrong yet; opening the page will say so.
+const preload = () => loadProject().catch(() => {});
+if ('requestIdleCallback' in window) requestIdleCallback(preload, { timeout: 4000 });
+else setTimeout(preload, 2000);
+
+/** Routes of the old brand-book site that now land somewhere on the new one. */
+const redirects = [
+  ['work', '/#projects'],
+  ['resume', '/#experience'],
+  ['brand', '/'],
+  ['identity', '/'],
+  ['history', '/'],
+  ['writing', '/'],
+  ['writing/*', '/'],
+];
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <CopyProvider>
-      <BrowserRouter>
+    <BrowserRouter>
+      <ErrorBoundary>
         <Routes>
-          <Route element={<Book />}>
-            <Route index element={<Cover />} />
-            <Route path="brand" element={<Brand />} />
-            <Route path="identity" element={<Identity />} />
-            <Route path="work" element={<WorkIndex />} />
-            <Route path="work/:slug" element={<WorkDetail />} />
-            <Route path="history" element={<History />} />
-            <Route path="writing" element={<WritingIndex />} />
-            <Route path="writing/:slug" element={<Letter />} />
-            <Route path="resume" element={<Resume />} />
+          <Route element={<Frame />}>
+            <Route index element={<Home />} />
+            <Route
+              path="work/:slug"
+              element={
+                <Suspense fallback={null}>
+                  <Project />
+                </Suspense>
+              }
+            />
             <Route path="*" element={<NotFound />} />
           </Route>
+          {redirects.map(([path, to]) => (
+            <Route key={path} path={path} element={<Navigate to={to} replace />} />
+          ))}
         </Routes>
-      </BrowserRouter>
-    </CopyProvider>
+      </ErrorBoundary>
+    </BrowserRouter>
   </StrictMode>,
 );
