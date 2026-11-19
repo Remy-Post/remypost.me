@@ -2,7 +2,7 @@
  * The scroll-progress signal: where the visitor is in the story, as numbers the 3D stage can follow.
  * Three-free and React-free; reads the DOM only when asked and does no work while nothing subscribes.
  *
- *   getProgress()  -> { route, slug, t, section, local, step, job, within, p }
+ *   getProgress()  -> { route, slug, t, near, section, local, step, job, within, p }
  *   onProgress(fn) -> unsubscribe; fn(progress, frameTime) fires on scroll, resize and route change, from one rAF per frame
  *   routeChanged() -> tell subscribers the route changed (the router calls it once the new page is in the DOM)
  *
@@ -20,10 +20,21 @@
  *          3 the projects, 4 the links. It holds at a whole number through a section and moves across the seam between
  *          two sections, over a window of one reading height centred on the seam.
  * t        the turntable, as before: 0 until the seam before the projects, 1..9 when project n is centred, 10 at the links.
+ * near     the project the visitor is at, 1..9 (0 at the intro and the links): `t` rounded, held until `t` is clearly closer to
+ *          another; above the text (phones) between two projects it is the next one, whose text is the one in view. The one
+ *          answer for the index, the stills, the hint and where the stage's turntable comes to rest.
  */
 import { projects } from '../content/site.js';
 
 const slugs = projects.map((p) => p.slug);
+/** How far past the halfway point `t` must travel before `near` changes, so it never flickers. */
+const HYSTERESIS = 0.12;
+let held = null; // the whole number `t` is currently rounded to
+/** `t` rounded to the nearest whole project, keeping the current one until `t` is clearly closer to another. */
+function holdNear(t) {
+  if (held === null || Math.abs(t - held) > 0.5 + HYSTERESIS) held = Math.round(t);
+  return held;
+}
 const STATIONS = ['top', 'education', 'experience', 'projects', 'links'];
 /** The breakpoint where the stage moves beside the text (see site.css). Narrower, the stage sits above it. */
 const WIDE = '(min-width: 960px)';
@@ -174,9 +185,16 @@ export function scrollYFor(el) {
 
 export function getProgress() {
   const { route, slug } = routeOf();
-  if (route === 'home') return { route, slug, ...homeProgress() };
-  if (route === 'project') return { route, slug, ...REST, t: slugs.indexOf(slug) + 1, section: 'projects', p: 3 };
-  return { route, slug, ...REST };
+  if (route === 'home') {
+    const home = homeProgress();
+    // Beside the text a place between two projects belongs to the nearer one. Above it (phones) the text is read under the stage and
+    // `t` crosses the gap between two blocks while the next one's first lines are already in view: so there it is the next one.
+    const near = window.matchMedia(WIDE).matches ? holdNear(home.t) : Math.ceil(home.t - 0.02);
+    return { route, slug, ...home, near };
+  }
+  held = null;
+  if (route === 'project') return { route, slug, ...REST, t: slugs.indexOf(slug) + 1, near: slugs.indexOf(slug) + 1, section: 'projects', p: 3 };
+  return { route, slug, ...REST, near: 0 };
 }
 
 const subscribers = new Set();

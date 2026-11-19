@@ -630,6 +630,18 @@ html.lenis body {
   margin: 2rem 0 0;
   color: var(--muted);
   font-size: 0.8em;
+  transition: opacity 300ms cubic-bezier(0.22, 0.61, 0.24, 1);
+}
+
+/* Not the project on the stage: still there (the page keeps its height), not shown. */
+.hint--idle {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hint {
+    transition: none;
+  }
 }
 
 /* Stepped sections (education, work): a heading, then one block per school or job, each about a screen */

@@ -112,7 +112,6 @@ export const links = [
   { key: 'linkedin', label: 'LinkedIn', detail: 'remy-post', href: person.linkedin },
   { key: 'tokens', label: 'Tokens', detail: 'tokens.remypost.me', href: 'https://tokens.remypost.me' },
   { key: 'specs', label: 'Specs', detail: 'specs.remypost.me', href: 'https://specs.remypost.me' },
-  { key: 'aa', label: 'AA', detail: 'aa.remypost.me', href: 'https://aa.remypost.me' },
   { key: 'earnings', label: 'Earnings', detail: 'earnings.remypost.me', href: 'https://earnings.remypost.me' },
 ];
 

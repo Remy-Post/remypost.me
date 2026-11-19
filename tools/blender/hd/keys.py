@@ -1,4 +1,4 @@
-"""Links: eight mechanical keycaps on a tilted aluminium plate. Nodes key_<name> (press along local -Z) and plate.
+"""Links: seven mechanical keycaps and one blank on a tilted aluminium plate. Nodes key_<name> (press along local -Z) and plate.
 
   Blender --background --python tools/blender/hd/keys.py -- --render [--size N --samples N]
   Blender --background --python tools/blender/hd/keys.py -- --export
@@ -19,7 +19,7 @@ os.makedirs(TEX, exist_ok=True)
 PITCH = 19.05
 KEYS = [  # name, label, column, row (row 0 is the front row)
     ('email', 'Email', 0, 0), ('resume', 'Résumé', 1, 0), ('github', 'GitHub', 2, 0), ('linkedin', 'LinkedIn', 3, 0),
-    ('tokens', 'Tokens', 0, 1), ('specs', 'Specs', 1, 1), ('aa', 'AA', 2, 1), ('earnings', 'Earnings', 3, 1),
+    ('tokens', 'Tokens', 0, 1), ('specs', 'Specs', 1, 1), ('earnings', 'Earnings', 2, 1), ('blank', '', 3, 1),  # a blank cap fills the last place
 ]
 PLATE = (4 * PITCH + 20, 2 * PITCH + 20, 9.0)  # mm
 TILT = math.radians(11)
@@ -46,8 +46,6 @@ PICTO = {
     'linkedin': [('stroke', circle((0, 1.35), 1.1), True), ('stroke', circle((0, -2.4), 2.5, 20, 0, math.pi) , False), ('stroke', [(-2.5, -2.4), (2.5, -2.4)], False)],
     'tokens': [('stroke', ellipse((0, y), 2.5, 0.78), True) for y in (1.7, 0, -1.7)],
     'specs': [('stroke', [(-2.9, y), (2.9, y)], False) for y in (1.7, 0, -1.7)] + [('disc', c, 0.72) for c in ((-1.0, 1.7), (1.3, 0), (-0.2, -1.7))],
-    'aa': [('stroke', [(-2.9, -1.2), (2.9, -1.2), (2.9, 1.5), (2.3, 2.2), (-2.3, 2.2), (-2.9, 1.5)], True), ('stroke', [(-2.9, 0.5), (2.9, 0.5)], False),
-           ('disc', (-1.6, -1.75), 0.75), ('disc', (1.6, -1.75), 0.75)],
     'earnings': [('stroke', [(-2.9, 2.3), (-2.9, -2.3), (2.9, -2.3)], False), ('stroke', [(-2.0, -1.2), (-0.6, 0.3), (0.5, -0.6), (2.3, 1.7)], False),
                  ('stroke', [(1.05, 1.62), (2.3, 1.7), (2.2, 0.45)], False)],
 }
@@ -229,8 +227,9 @@ def build():
         k.location = (x * MM, y * MM, (T / 2 + 6.6 + CAP_H / 2) * MM)
         bevel(k, 0.45 * MM, 3, 28)
         assign(k, cap_accent if name == 'email' else cap)
-        lg = legend_mesh('legend_' + name, name, label, k)
-        assign(lg, ink_accent if name == 'email' else ink)
+        if label:
+            lg = legend_mesh('legend_' + name, name, label, k)
+            assign(lg, ink_accent if name == 'email' else ink)
 
     for sx in (-1, 1):
         for sy in (-1, 1):
@@ -269,9 +268,10 @@ def export_web():
     plate = bpy.data.objects['plate']
     # Legends join their caps; everything fixed joins the plate and is baked as one texture set.
     for name, *_ in KEYS:
-        k, lg = bpy.data.objects['key_' + name], bpy.data.objects['legend_' + name]
-        wk._only([lg, k], k)
-        bpy.ops.object.join()
+        k, lg = bpy.data.objects['key_' + name], bpy.data.objects.get('legend_' + name)
+        if lg:
+            wk._only([lg, k], k)
+            bpy.ops.object.join()
         mw = k.matrix_world.copy()
         k.parent = root
         k.matrix_parent_inverse = Matrix.Identity(4)

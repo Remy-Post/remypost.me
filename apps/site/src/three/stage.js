@@ -74,6 +74,9 @@ const FOCUS_RATE = RATE.camera;
 const LEAN_RATE = RATE.object;
 const SPIN_RATE = RATE.object;
 const APPEAR_RATE = RATE.object;
+const REST_AFTER = 200; // ms the page must be still before the turntable eases onto a project (see apply())
+const SETTLE_RATE = 9; // rad/s of that ease: 95% of the way in about 530 ms, a little quicker than following the scroll
+const INDEX_SOFT = 16; // css px: how far round the project index the objects go on dissolving
 const POOL_ALONE = Math.tan(0.5) * 6 / 2.2; // the pool of a lone object at a project (angle 0.5, light 6 away), metres
 const POOL_OFFSET = [0.55, -0.25]; // where that pool sits against the object: the key's offset at a project
 const STATION_POOL = 0.8; // how much of a project's pool a station has under it
@@ -189,6 +192,81 @@ export async function createStage(mount, { onLost, signal } = {}) {
   const fadeScale = { value: 1 };
   const poolAt = { value: new Vector2() }; // where the key light's pool is centred (its target), not where the camera looks
   const poolR = { value: 3 }; // metres: the floor's light is a gaussian this wide round where the camera looks, so the pool has no traceable edge
+  // The project index (the nine names, top right of the stage) is text laid over the picture, so what the turntable draws must not be
+  // under it, whether the ring is turning or still. Round the names (each one's text, the row's height, the rest of the list's width
+  // and the strip of picture to the right of it: the convex hull of those boxes, so that no piece of an object is left floating
+  // between two names) the objects dissolve with the stipple they already leave with, and for INDEX_SOFT px beyond it (see clearIndex()).
+  const EDGES = 12; // the hull's sides, at most
+  const holeFx = { value: new Vector4(0, INDEX_SOFT, 1, 1) }; // how much of it is on (0 to 1), the soft edge (css px), half the mount's size (css px)
+  const hole = { proj: { value: camera.projectionMatrix }, edges: { value: Array.from({ length: EDGES }, () => new Vector3(0, 0, 1e4)) }, fx: holeFx }; // (0, 0, 1e4) is a side that is nowhere
+  /** The corners [x, y] in `points` that make the smallest convex shape round them all, counter-clockwise (monotone chain). */
+  function hullOf(points) {
+    const cross = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+    const chain = (list) => {
+      const out = [];
+      for (const q of list) {
+        while (out.length >= 2 && cross(out[out.length - 2], out[out.length - 1], q) <= 0) out.pop();
+        out.push(q);
+      }
+      return out.slice(0, -1);
+    };
+    const sorted = [...points].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+    return [...chain(sorted), ...chain(sorted.reverse())];
+  }
+  /** Where the index stands on the stage. The list is fixed to the window, so this changes only when the window does. */
+  function measureIndex() {
+    const links = [...document.querySelectorAll('.index a')];
+    const m = mount.getBoundingClientRect();
+    hasIndex = links.length > 0 && m.width > 0 && m.height > 0 && links[0].getBoundingClientRect().width > 0; // below 1100 px there is no index
+    if (!hasIndex) return;
+    // In css px from the middle of the stage, y up: the units the shader turns a place in the picture into.
+    const cx = m.left + m.width / 2;
+    const cy = m.top + m.height / 2;
+    const range = document.createRange();
+    const points = [];
+    for (const link of links) {
+      const a = link.getBoundingClientRect();
+      range.selectNodeContents(link);
+      const left = range.getBoundingClientRect().left - 8;
+      for (const [x, y] of [[left, a.top], [m.right + 4, a.top], [m.right + 4, a.bottom], [left, a.bottom]]) points.push([x - cx, cy - y]);
+    }
+    const hull = hullOf(points);
+    hole.edges.value.forEach((edge, i) => {
+      if (i >= hull.length) return edge.set(0, 0, 1e4);
+      const [px, py] = hull[i];
+      const [qx, qy] = hull[(i + 1) % hull.length];
+      const len = Math.hypot(qx - px, qy - py) || 1;
+      const nx = (qy - py) / len; // the outward normal: the hull runs counter-clockwise
+      const ny = -(qx - px) / len;
+      edge.set(nx, ny, nx * px + ny * py);
+    });
+    holeFx.value.z = m.width / 2;
+    holeFx.value.w = m.height / 2;
+  }
+  /**
+   * Add the dissolve to a lit material's shader: a fragment whose place in the picture (from its view-space position, so that the
+   * transmission pass, which is drawn at another resolution, agrees with the main one) is inside the hull goes, by the same noise the
+   * fade uses; outside it the share that stays rises to 1 over INDEX_SOFT px.
+   */
+  function clearIndex(shader) {
+    shader.uniforms.uHoleProj = hole.proj;
+    shader.uniforms.uHoleEdges = hole.edges;
+    shader.uniforms.uHoleFx = hole.fx;
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', `#include <common>\nuniform mat4 uHoleProj;\nuniform vec3 uHoleEdges[${EDGES}];\nuniform vec4 uHoleFx;`)
+      .replace(
+        '#include <opaque_fragment>',
+        `if (uHoleFx.x > 0.0) {
+          vec4 hc = uHoleProj * vec4(-vViewPosition, 1.0);
+          vec2 hp = hc.xy / hc.w * uHoleFx.zw;
+          float hd = -1e4;
+          for (int i = 0; i < ${EDGES}; i++) hd = max(hd, dot(uHoleEdges[i].xy, hp) - uHoleEdges[i].z);
+          float hk = mix(1.0, smoothstep(0.0, uHoleFx.y, max(hd, 0.0)), uHoleFx.x);
+          if (hk < 0.995 && fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715)))) >= hk) discard;
+        }
+        #include <opaque_fragment>`,
+      );
+  }
   const floorMaterial = new MeshStandardMaterial({ color: '#1d1f24', roughness: 0.5, metalness: 0, transparent: true });
   // The floor thins out to nothing with distance from where the camera looks, so it has no far edge and no horizon.
   floorMaterial.onBeforeCompile = (shader) => {
@@ -293,8 +371,10 @@ export async function createStage(mount, { onLost, signal } = {}) {
   let wake = () => {};
   let warmed = false;
   const aniso = renderer.capabilities.getMaxAnisotropy();
-  // What prepare() (common.js) needs of the studio: texture sharpness, and the metals, whose reflections are scaled apart.
-  const look = { aniso, metals: new Set(), env: null };
+  // What prepare() (common.js) needs of the studio: texture sharpness, the metals (whose reflections are scaled apart), and what every
+  // object's shader is given besides the fade, the dissolve round the project index. (A station that passes an `extend` of its own,
+  // as the pennants and the badge do, keeps that one: it is the keycaps and patches that can come in over the list.)
+  const look = { aniso, metals: new Set(), env: null, extend: (shader, x) => x.isMeshStandardMaterial && clearIndex(shader) };
   const ctx = {
     loadModel: (url) => loadModel(url, ac.signal, small() ? 1024 : 2048),
     wake: () => wake(),
@@ -354,6 +434,15 @@ export async function createStage(mount, { onLost, signal } = {}) {
   let last = 0;
   let scrollY = window.scrollY;
   let scrollAt = performance.now();
+  // A page at rest (see apply()): the ring does not stay between two projects once the page has stopped there.
+  let resting = true; // the page is still, or has not moved since it opened
+  let restY = scrollY; // where it came to rest
+  let snapped = false; // the ring is headed for the project the index marks, not for the scroll's own place
+  let latest = null; // the progress last applied
+  let restTimer = 0;
+  // The project index (the nine names, top right of the stage) is text over the picture: nothing the turntable draws may be under it.
+  const indexHole = spring(0);
+  let hasIndex = false;
 
   const turning = () => route === 'project';
   const active = () => (turning() ? frontIndex(tTarget) : -1);
@@ -381,13 +470,14 @@ export async function createStage(mount, { onLost, signal } = {}) {
       return true;
     };
     let rest = true;
-    const ringRest = go(ringT, tTarget, RING_RATE);
+    const ringRest = go(ringT, tTarget, snapped ? SETTLE_RATE : RING_RATE);
     const pathRest = go(pathP, pTarget, PATH_RATE);
     const focusRest = go(focus, turning() ? 1 : 0, FOCUS_RATE);
     const leadRest = go(lead, Math.sign(pTarget - pathP.x), RATE.key);
     cameraRest = ringRest && pathRest && focusRest;
     rest = ringRest && pathRest && focusRest && leadRest && rest;
     const l = leanOn() ? Math.min(1, 1 / Math.max(1e-6, Math.hypot(pointer.nx, pointer.ny))) : 0; // at most LEAN in all
+    rest = go(indexHole, hasIndex && section === 'projects' ? 1 : 0, RATE.object) && rest;
     rest = go(lean.x, pointer.nx * LEAN * l, LEAN_RATE) && rest;
     rest = go(lean.y, pointer.ny * LEAN * l, LEAN_RATE) && rest;
     const a = active();
@@ -429,6 +519,7 @@ export async function createStage(mount, { onLost, signal } = {}) {
   /** Put the scene into the state the springs describe and draw it. */
   function draw() {
     const P = pathP.x;
+    holeFx.value.x = indexHole.x;
     const u = tableness(ringT.x);
     const R = radius(ringT.x);
     const ringY = ringAngle(ringT.x);
@@ -635,6 +726,7 @@ export async function createStage(mount, { onLost, signal } = {}) {
     renderer.setSize(w, h, false);
     post.setSize(w, h);
     renderer.getDrawingBufferSize(resolution.value);
+    measureIndex();
     aspect = w / h;
     camera.aspect = aspect;
     first = true; // a new frame size is a new composition: no travel
@@ -681,7 +773,34 @@ export async function createStage(mount, { onLost, signal } = {}) {
   on(window, 'focus', ensureRatio);
 
   // ── the scroll target ───────────────────────────────────────────────────
-  let settle = 0;
+  /**
+   * Where the ring is headed: along the scroll, or, once the page is still at the projects, onto `near`, the project the index
+   * marks. Everything else the turntable does (the camera's framing, which objects are lit, the pool of light) is a function of the
+   * ring's position, so at a whole project it is exactly the framing the stage rests in.
+   */
+  function aimRing() {
+    snapped = resting && latest.route === 'home' && Math.abs(latest.p - 3) < 0.02 && latest.near >= 1 && latest.near <= COUNT;
+    tTarget = snapped ? latest.near : Math.min(latest.t, COUNT); // past the last project the ring stays put: nothing of it is wanted at the links, and turning it would swing the last object off the front as it leaves
+  }
+
+  /**
+   * The page has been still. The scroll can stop anywhere, between two projects too, where the turntable followed it to two objects
+   * half in and half out of the frame either side of an empty pool of light: a page at rest never shows that. So the ring eases
+   * onto the project the index marks (about half a second, a cut under reduced motion), and the page's own scroll is never touched.
+   * When it moves again the ring is simply chased toward the scroll's place from wherever it is, so nothing steps.
+   */
+  function restNow() {
+    restTimer = 0;
+    if (dead || lost || !latest) return;
+    resting = true;
+    restY = window.scrollY;
+    measureIndex();
+    aimRing();
+    reconcile();
+    wake();
+  }
+  cleanups.push(() => clearTimeout(restTimer));
+
   function apply(p, frameTime) {
     ensureRatio();
     const now = performance.now();
@@ -689,9 +808,11 @@ export async function createStage(mount, { onLost, signal } = {}) {
     const speed = ((y - scrollY) / Math.max(8, now - scrollAt)) * 1000; // px per second
     scrollY = y;
     scrollAt = now;
+    latest = p;
     route = p.route;
     section = p.section;
-    tTarget = Math.min(p.t, COUNT); // past the last project the ring stays put: nothing of it is wanted at the links, and turning it would swing the last object off the front as it leaves
+    if (resting && Math.abs(y - restY) > 3) resting = false; // a pixel or two is the layout settling, not the visitor
+    aimRing();
     pTarget = p.p;
     mount.toggleAttribute('data-turn', turning());
     stations.education.setStep?.(p.step);
@@ -701,18 +822,23 @@ export async function createStage(mount, { onLost, signal } = {}) {
       stations.experience.nudge?.({ scroll: speed });
     }
     showWhenReady();
-    if (reducedMotion()) {
-      // No travel: the scene jumps to the target once scrolling has stopped, and draws once.
-      clearTimeout(settle);
-      settle = setTimeout(wake, 140);
-    } else if (frameTime !== undefined && started && !raf && !dead && !lost && !isHidden()) {
-      // Called from the same animation frame the scroll was read in: draw now, so the picture moves in the very frame the
-      // text does. (Waking would draw one frame later, and the text would be a frame ahead of the stage.)
-      frame(frameTime);
-    } else wake();
+    // Every scroll event, a Lenis glide's included, puts the moment of rest back.
+    const reduced = reducedMotion();
+    if (!resting || reduced) {
+      clearTimeout(restTimer);
+      restTimer = setTimeout(restNow, reduced ? 140 : REST_AFTER);
+    }
+    // Under reduced motion there is no travel: nothing is drawn until the page is still (restNow), and then the scene cuts to where
+    // it rests, once.
+    if (!reduced) {
+      if (frameTime !== undefined && started && !raf && !dead && !lost && !isHidden()) {
+        // Called from the same animation frame the scroll was read in: draw now, so the picture moves in the very frame the
+        // text does. (Waking would draw one frame later, and the text would be a frame ahead of the stage.)
+        frame(frameTime);
+      } else wake();
+    }
     reconcile();
   }
-  cleanups.push(() => clearTimeout(settle));
 
   /** Scroll the text so step `index` of `id`'s section is on the focus line (the arrow keys and badge clicks). */
   function stepTo(id, index) {
@@ -1288,7 +1414,10 @@ export async function createStage(mount, { onLost, signal } = {}) {
         if (x.name === 'Liquid') x.transmission = 0;
         if (x.transmission > 0 && !x.roughnessMap && x.roughness < 0.06) x.roughness = 0;
       },
-      extend: (shader, x, m) => beh?.extend?.(shader, x, m),
+      extend: (shader, x, m) => {
+        beh?.extend?.(shader, x, m);
+        look.extend(shader, x);
+      },
     });
     beh = createBehaviour(o.name, model, ctx, { scale: n.k });
     // Off screen first: shaders compiled, textures uploaded, and only then does it replace what was there.

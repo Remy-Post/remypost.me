@@ -2,6 +2,7 @@ import { Link } from 'react-router';
 import { useLive, useStatus } from '../components/Objects.jsx';
 import { clearHot, setHot } from '../scene/hot.js';
 import { useHot } from '../scene/hooks.js';
+import { useActiveProject } from '../scene/useActiveProject.js';
 import { education, intro, jobs, links, person, projects, skills } from '../content/site.js';
 
 const toProjects = { pathname: '/', hash: '#projects' };
@@ -14,9 +15,13 @@ const points = (kind, ids) => ({
   onBlur: () => clearHot(kind),
 });
 
-/** A line saying what to do with an object: shown only while that object is really on the stage. */
-function Hint({ name, children }) {
-  return useLive(name) ? <p className="hint">{children}</p> : null;
+/**
+ * A line saying what to do with an object: shown only while that object is really on the stage, and, among the projects, only
+ * for the one the stage rests on (`current`): the end of the text above can still be on screen while the next project is the
+ * one shown, and its line must not promise something to do with an object that is not there. It keeps its room (the page does not move).
+ */
+function Hint({ name, current = true, children }) {
+  return useLive(name) ? <p className={current ? 'hint' : 'hint hint--idle'}>{children}</p> : null;
 }
 
 /**
@@ -27,6 +32,7 @@ export default function Home() {
   const status = useStatus();
   const experienceLive = useLive('experience');
   const hot = useHot();
+  const active = useActiveProject();
   const lit = (kind, ids) => hot.kind === kind && ids.some((id) => hot.ids.includes(id));
   return (
     <>
@@ -118,7 +124,11 @@ export default function Home() {
               )}
               {p.status && <span className="status">{p.status}</span>}
             </div>
-            {p.hint && <Hint name={p.object}>{p.hint}</Hint>}
+            {p.hint && (
+              <Hint name={p.object} current={p.slug === active}>
+                {p.hint}
+              </Hint>
+            )}
           </section>
         ))}
       </div>
