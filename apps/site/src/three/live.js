@@ -128,6 +128,12 @@ export function fetchBuffer(url, signal) {
   });
 }
 
+/** Forget one downloaded file, once it has been parsed: the parsed model does not keep it, and a later load asks the browser's cache again. */
+export function forgetBuffer(url) {
+  const entry = buffers.get(url);
+  if (entry?.done) buffers.delete(url);
+}
+
 /** Forget every downloaded file: the stage has gone, and the ArrayBuffers (a dozen MB) go with it. The browser's own cache still holds the files. */
 export function clearBuffers() {
   for (const entry of buffers.values()) if (!entry.done) entry.ac.abort();
@@ -206,8 +212,10 @@ let busy = Promise.resolve();
  * Returns the stop function: it disposes the stage and cancels anything pending.
  *
  * Starts are strictly one after another: a start waits for the stage before it to be gone, whatever state that one was
- * in (still loading its environment, half way through a model), because the parsed models and the studio's globals are
- * shared and two stages must never hold them at once. Stopping aborts a start that is under way.
+ * in (still loading its environment, half way through a model), because the studio's globals (the ready names, the
+ * downloaded files, the highlight) are shared and a stage that is still unwinding must never clear what the next one has
+ * made. Stopping aborts a start that is under way; `busy` is let go only when that start has really finished (its
+ * `finally`), never by the stop itself.
  */
 export function startLive(mount, onState) {
   let stage = null;
@@ -253,10 +261,17 @@ export function startLive(mount, onState) {
     gone = true;
     ac.abort();
     cancel();
-    stage?.dispose();
+    // A stage in hand goes now, and only then may the next start begin. A start still inside createStage lets go of `busy` itself
+    // (run's finally), after it has disposed what it made: releasing here would let a second renderer be built beside it. The
+    // release is in a finally, so a dispose that throws cannot leave `busy` held for the rest of the session.
+    const held = stage;
     stage = null;
-    release();
-    setStatus('off');
-    onState(false);
+    try {
+      held?.dispose();
+    } finally {
+      if (held) release();
+      setStatus('off');
+      onState(false);
+    }
   };
 }

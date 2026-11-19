@@ -35,6 +35,10 @@ class DitherEffect extends Effect {
 
 export function createPost(renderer, scene, camera, { bloom = true, dof = true, smaa = true, samples = 4 } = {}) {
   const composer = new EffectComposer(renderer, { frameBufferType: HalfFloatType, multisampling: samples });
+  // The library gives both of its buffers the sample count, but only the one the scene is drawn into has geometry edges to
+  // average: every pass after it draws one screen-sized quad into the other, where four samples change no pixel and cost 120 MB
+  // (colour and depth) at a retina stage.
+  composer.outputBuffer.samples = 0;
   const renderPass = new RenderPass(scene, camera);
   composer.addPass(renderPass);
 

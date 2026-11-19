@@ -15,6 +15,11 @@ const safeDecode = (s) => {
 };
 const reduced = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+/** How long after a jump to a section it keeps checking that the section is still where the jump was aimed (ms). */
+const HOLD = 8000;
+/** The visitor's own hand on the page: the first of these ends the check for good. */
+const TAKEOVER = ['wheel', 'touchstart', 'pointerdown', 'keydown'];
+
 /** The scroll-margin-top the section asks for (what scrollIntoView honoured, and Lenis and scrollTo do not). */
 const scrollMargin = (el) => parseFloat(getComputedStyle(el).scrollMarginTop) || 0;
 
@@ -40,6 +45,35 @@ const save = () => {
     /* private mode: restoring is best effort */
   }
 };
+
+/**
+ * A landing that keeps its line. Something above the target can change height after the jump was aimed: the hint that goes with
+ * each object, which the stage lets go of as the camera comes to the links (nine of them, 770 px in all), a picture, a font.
+ * Chrome and Firefox move the scroll position to compensate (scroll anchoring); Safari does not, so the jump stopped at the end
+ * of the shorter page and left the Links heading hidden under the stage. For a few seconds after a jump, whenever the target's
+ * place on the page has moved, the jump is aimed again at the new place (still gliding if it was a glide and is still going). The
+ * visitor's first wheel, touch, press or key takes over for good. Returns the function that ends the check.
+ */
+function holdLanding(target, margin, glide) {
+  const place = () => target.getBoundingClientRect().top + window.scrollY - margin;
+  const started = performance.now();
+  let aimed = place();
+  const watch = new ResizeObserver(() => {
+    const now = place();
+    if (Math.abs(now - aimed) < 1) return;
+    aimed = now;
+    scrollToTarget(target, { smooth: glide && performance.now() - started < 1300, margin });
+  });
+  watch.observe(document.querySelector('.frame') ?? document.body);
+  const stop = () => {
+    watch.disconnect();
+    clearTimeout(timer);
+    for (const type of TAKEOVER) window.removeEventListener(type, stop);
+  };
+  const timer = setTimeout(stop, HOLD);
+  for (const type of TAKEOVER) window.addEventListener(type, stop, { passive: true });
+  return stop;
+}
 
 /**
  * The page's scrolling, which the router does not do in declarative mode. No scroll hijacking: this only decides where a
@@ -78,10 +112,14 @@ export default function ScrollManager() {
     // leave the heading under the bar.
     const wanted = location.hash && safeDecode(location.hash.slice(1));
     const target = wanted && document.getElementById(wanted === projects[0].slug ? 'projects' : wanted);
+    let hold;
     if (type === 'POP' && location.key in positions) window.scrollTo({ top: positions[location.key], behavior: 'instant' });
-    else if (target) scrollToTarget(target, { smooth: behavior === 'smooth', margin: scrollMargin(target) });
-    else scrollToTarget(0, { smooth: behavior === 'smooth' });
+    else if (target) {
+      scrollToTarget(target, { smooth: behavior === 'smooth', margin: scrollMargin(target) });
+      hold = holdLanding(target, scrollMargin(target), behavior === 'smooth');
+    } else scrollToTarget(0, { smooth: behavior === 'smooth' });
     routeChanged();
+    return () => hold?.();
   }, [location, type]);
 
   return null;

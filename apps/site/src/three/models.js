@@ -1,6 +1,6 @@
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
-import { fetchBuffer } from './live.js';
+import { fetchBuffer, forgetBuffer } from './live.js';
 import * as pixels from './pixels.js';
 
 // Decoding meshes (a few MB of wasm work per model) happens in workers of its own, not between two frames.
@@ -67,6 +67,7 @@ async function shrink(scene, cap) {
 export async function loadModel(url, signal, cap = 2048) {
   const buffer = await fetchBuffer(url, signal);
   const scene = await abortable(parse(buffer), signal);
+  forgetBuffer(url);
   await abortable(shrink(scene, cap), signal);
   return scene;
 }

@@ -422,6 +422,9 @@ export async function createStage(mount, { onLost, signal } = {}) {
     return !rest;
   }
 
+  /** Is the table view on screen, which the twin camera draws (see draw())? */
+  const atTable = () => tableness(ringT.x) > 0.5 && tableX(pathP.x) === 0;
+
   const target = new Vector3();
   /** Put the scene into the state the springs describe and draw it. */
   function draw() {
@@ -578,7 +581,7 @@ export async function createStage(mount, { onLost, signal } = {}) {
     // screen itself; at the table view, with nine objects and nothing to read, it drops to save the fill (2560 px at DPR 2:
     // 24 ms a frame at the full scale, 17 ms at the small one). Resizing the transmission buffer is an 80 to 130 ms stall, and
     // each camera has a buffer of its own: so the table view is drawn from a twin camera that always keeps the small one.
-    const overview = u > 0.5 && px === 0;
+    const overview = atTable();
     if (overview) {
       overviewCamera.copy(camera, false);
       overviewCamera.updateMatrixWorld();
@@ -902,10 +905,15 @@ export async function createStage(mount, { onLost, signal } = {}) {
   const held = new Map(); // key -> 'low' | 'high' | 'station': what is loaded and ready
   const failedAt = new Map(); // `key:level` -> when it last failed to load: not tried again for a while (a blocked file must not be fetched in a loop)
   const RETRY = 30000;
+  const TRIES = 3; // a file that keeps failing is asked for this many times in all, then left alone
+  const failures = new Map(); // `key:level` -> how many times it has failed
+  /** How long a file is left alone after its last failure: a few seconds after the first (a dropped request), RETRY after that. */
+  const pause = (id) => ((failures.get(id) ?? 0) <= 1 ? 3000 : RETRY);
   const busy = new Set(); // keys being loaded
   let inflight = 0;
   let evictTimer = 0;
-  cleanups.push(() => clearTimeout(evictTimer));
+  const retryTimers = new Set(); // one per failure: each wakes reconcile() when that file's pause is over
+  cleanups.push(() => clearTimeout(evictTimer), () => retryTimers.forEach(clearTimeout));
 
   function unloadObject(i) {
     const o = objects[i];
@@ -1075,15 +1083,17 @@ export async function createStage(mount, { onLost, signal } = {}) {
       return true;
     } finally {
       if (remote) {
-        pixels
-          .send({ op: 'close' }, id)
-          .then(({ bitmap }) => {
-            if (!bitmap) return;
-            // Back from the worker: it is the texture's image again, unless the texture has been let go meanwhile.
+        try {
+          const { bitmap } = await pixels.send({ op: 'close' }, id);
+          // Back from the worker: it is the texture's image again, unless the texture has been let go meanwhile. (Waited for, so
+          // that warm() can free the images of everything it has uploaded.)
+          if (bitmap) {
             if (renderer.properties.get(v).__webglTexture === tex) v.source.data = bitmap;
             else bitmap.close();
-          })
-          .catch(() => {});
+          }
+        } catch {
+          /* the worker is gone: the bitmap with it */
+        }
       }
     }
     if (v.generateMipmaps) {
@@ -1105,6 +1115,7 @@ export async function createStage(mount, { onLost, signal } = {}) {
     root.traverse((m) => {
       if (m.isMesh || m.isPoints || m.isLine || m.isSprite) meshes.push(m);
     });
+    letGoOfGeometry(meshes);
     const compiling = [];
     let c0 = performance.now();
     for (const m of meshes) {
@@ -1162,7 +1173,42 @@ export async function createStage(mount, { onLost, signal } = {}) {
       }
     }
     await quiet();
-    if (!dead && !lost) prime(root);
+    if (dead || lost) return;
+    freeImages(textures);
+    prime(root);
+  }
+
+  /**
+   * Once a mesh's buffers are on the GPU nothing reads them here again (the hit volumes are boxes of their own, sizes and bounds
+   * are taken at load, and the depth and shadow passes draw from the GPU's copy), so each buffer lets go of its array right
+   * after its upload. The bounds that culling would otherwise make from the array, later, are made first.
+   */
+  function letGoOfGeometry(meshes) {
+    const free = function () {
+      this.array = null; // `this` is the buffer: three calls onUploadCallback on the attribute (or the interleaved buffer) it has just uploaded
+    };
+    for (const m of meshes) {
+      const g = m.geometry;
+      if (!g?.attributes || g.userData.letGo) continue;
+      g.userData.letGo = true;
+      if (!g.boundingSphere) g.computeBoundingSphere();
+      if (!g.boundingBox) g.computeBoundingBox();
+      // A skinned mesh has bounds of its own (it is sorted by them in its first draw, right after its buffers go up).
+      if (m.boundingSphere === null) m.computeBoundingSphere();
+      if (m.boundingBox === null) m.computeBoundingBox();
+      for (const a of [g.index, ...Object.values(g.attributes)]) (a?.isInterleavedBufferAttribute ? a.data : a)?.onUpload(free);
+    }
+  }
+
+  /**
+   * The textures are on the GPU: the decoded bitmaps behind them (16 MB each at 2048 px) are not needed again, so they are freed
+   * now instead of with the model. A bitmap is shared by every texture made from it, so it goes only when all of those are up.
+   */
+  function freeImages(textures) {
+    const up = (v) => renderer.properties.get(v).__webglTexture !== undefined;
+    const sources = new Map();
+    for (const v of textures) sources.set(v.source, (sources.get(v.source) ?? true) && up(v));
+    for (const [source, done] of sources) if (done && typeof ImageBitmap !== 'undefined' && source.data instanceof ImageBitmap) source.data.close();
   }
 
   /**
@@ -1183,20 +1229,31 @@ export async function createStage(mount, { onLost, signal } = {}) {
     const target = renderer.getRenderTarget();
     renderer.setRenderTarget(post.composer.inputBuffer);
     const scale = renderer.transmissionResolutionScale;
+    const glass = meshes.some(([m]) => m.material?.transmission > 0);
     try {
       // The transmission buffer of each camera is sized by the scale in force when it is drawn: this draw must use the scale the
       // camera will have when it is seen, or the first real frame resizes (reallocates) it, which was a 80 to 110 ms frame of GPU
       // time on the way into the first project.
-      renderer.transmissionResolutionScale = wide ? 1.75 : 1.25;
-      renderer.render(scene, camera);
-      if (!overviewPrimed && meshes.some(([m]) => m.material?.transmission > 0)) {
-        // The table view's twin camera has a transmission buffer of its own: made now, drawn once, not on the way into the first
-        // project (a 30 to 120 ms frame).
-        overviewPrimed = true;
+      if (atTable()) {
+        // The table view is drawn by the twin camera, so that is the one primed, and its buffer is the only one made: the main
+        // camera's is 1.75 times the picture on each side (some 490 MB at a retina stage) and nothing at the table ever uses it.
+        overviewPrimed ||= glass;
         overviewCamera.copy(camera, false);
         overviewCamera.updateMatrixWorld();
         renderer.transmissionResolutionScale = OVERVIEW_SCALE;
         renderer.render(scene, overviewCamera);
+      } else {
+        renderer.transmissionResolutionScale = wide ? 1.75 : 1.25;
+        renderer.render(scene, camera);
+        if (!overviewPrimed && glass) {
+          // The table view's twin camera has a transmission buffer of its own: made now, drawn once, not on the way into the first
+          // project (a 30 to 120 ms frame).
+          overviewPrimed = true;
+          overviewCamera.copy(camera, false);
+          overviewCamera.updateMatrixWorld();
+          renderer.transmissionResolutionScale = OVERVIEW_SCALE;
+          renderer.render(scene, overviewCamera);
+        }
       }
     } finally {
       renderer.transmissionResolutionScale = scale;
@@ -1315,7 +1372,8 @@ export async function createStage(mount, { onLost, signal } = {}) {
       if (inflight >= 3) break;
       const have = held.get(w.key);
       if (busy.has(w.key) || have === 'station' || have === 'high' || (have === 'low' && w.level === 'low')) continue;
-      if (performance.now() - (failedAt.get(`${w.key}:${w.level}`) ?? -Infinity) < RETRY) continue;
+      const id = `${w.key}:${w.level}`;
+      if (performance.now() - (failedAt.get(id) ?? -Infinity) < pause(id)) continue;
       run(w);
     }
   }
@@ -1336,8 +1394,19 @@ export async function createStage(mount, { onLost, signal } = {}) {
       if (dead || lost) return;
       await (typeof w.key === 'number' ? loadObject(w.key, w.level) : loadStation(w.key));
     } catch (err) {
-      failedAt.set(`${w.key}:${w.level}`, performance.now());
-      if (!dead && !ac.signal.aborted) console.warn(`stage: ${typeof w.key === 'number' ? objects[w.key].name : w.key} not loaded`, err);
+      const id = `${w.key}:${w.level}`;
+      failedAt.set(id, performance.now());
+      if (!dead && !ac.signal.aborted) {
+        console.warn(`stage: ${typeof w.key === 'number' ? objects[w.key].name : w.key} not loaded`, err);
+        // Nothing else wakes the stage while the visitor is at rest, so without this a file that failed once (a dropped request
+        // while the page was still settling) was never asked for again until the next scroll, and the canvas stayed away.
+        const n = (failures.get(id) ?? 0) + 1;
+        failures.set(id, n);
+        if (n < TRIES) {
+          const timer = setTimeout(() => (retryTimers.delete(timer), reconcile()), pause(id) + 50);
+          retryTimers.add(timer);
+        }
+      }
     } finally {
       busy.delete(w.key);
       inflight--;
@@ -1361,26 +1430,30 @@ export async function createStage(mount, { onLost, signal } = {}) {
     cancelAnimationFrame(raf);
     ac.abort();
     for (const fn of cleanups.splice(0)) fn();
-    // Everything the stage loaded is given back: the models' textures (GPU and decoded images), the downloaded files.
-    objects.forEach((o, i) => o.model && unloadObject(i));
-    for (const [id, s] of Object.entries(stations)) {
-      if (s.models?.length) unloadStation(id);
-      s.dispose?.();
+    try {
+      // Everything the stage loaded is given back: the models' textures (GPU and decoded images), the downloaded files.
+      objects.forEach((o, i) => o.model && unloadObject(i));
+      for (const [id, s] of Object.entries(stations)) {
+        if (s.models?.length) unloadStation(id);
+        s.dispose?.();
+      }
+      clearReady();
+      clearBuffers();
+      clearHot('key', 'stage');
+      clearHot('patch', 'stage');
+      disposeTree(scene);
+      look.metals.clear();
+      envTarget?.dispose();
+      post.dispose();
+      key.shadow.map?.dispose();
+    } finally {
+      // Whatever above failed, the canvas goes and the context is handed back: a stage that is off must not draw.
+      renderer.dispose();
+      if (!isLost) renderer.forceContextLoss();
+      canvas.remove();
+      mount.removeAttribute('data-turn');
+      mount.removeAttribute('data-hit');
     }
-    clearReady();
-    clearBuffers();
-    clearHot('key', 'stage');
-    clearHot('patch', 'stage');
-    disposeTree(scene);
-    look.metals.clear();
-    envTarget?.dispose();
-    post.dispose();
-    key.shadow.map?.dispose();
-    renderer.dispose();
-    if (!isLost) renderer.forceContextLoss();
-    canvas.remove();
-    mount.removeAttribute('data-turn');
-    mount.removeAttribute('data-hit');
   }
 
   try {
